@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import Square from "./Square";
 
-const INITIAL_GAME_STATE = ["", "", "", "", "", "", "", "", ""];
+type Player = "X" | "O";
+type Scores = { [key in Player]: number };
+
+const INITIAL_GAME_STATE: string[] = ["", "", "", "", "", "", "", "", ""];
+const INITIAL_SCORES: Scores = { X: 0, O: 0 };
 const WINNING_COMBOS: number[][] = [
   [0, 1, 2],
   [3, 4, 5],
@@ -14,20 +18,16 @@ const WINNING_COMBOS: number[][] = [
 ];
 
 const Game: React.FC = () => {
-  const [gameState, setGameState] = useState<string[]>(INITIAL_GAME_STATE);
-  const [currentPlayer, setCurrentPlayer] = useState<string>("X");
+  const [gameState, setGameState] = useState(INITIAL_GAME_STATE);
+  const [currentPlayer, setCurrentPlayer] = useState<Player>("X");
+  const [scores, setScores] = useState<Scores>(INITIAL_SCORES);
 
   useEffect(() => {
-    checkForWinner();
-  }, [gameState]);
-
-  const handleWin = () => {
-    window.alert(`Congrats player ${currentPlayer}! You are the winner!`);
-  };
-
-  const handleDraw = () => {
-    window.alert("The game ended in a draw");
-  };
+    const storedScores = localStorage.getItem("scores");
+    if (storedScores) {
+      setScores(JSON.parse(storedScores));
+    }
+  }, []);
 
   const checkForWinner = () => {
     let roundWon = false;
@@ -46,26 +46,48 @@ const Game: React.FC = () => {
     }
 
     if (roundWon) {
-      setTimeout(() => handleWin(), 500);
+      handleWin(currentPlayer);
       return;
     }
 
     if (!gameState.includes("")) {
-      setTimeout(() => handleDraw(), 500);
+      handleDraw();
     }
   };
+
+  useEffect(() => {
+    checkForWinner();
+  }, [gameState]);
+
+  const handleWin = (winner: Player) => {
+    window.alert(`Congrats player ${winner}! You are the winner!`);
+
+    const newPlayerScore = scores[winner] + 1;
+    const newScores = { ...scores };
+    newScores[winner] = newPlayerScore;
+    setScores(newScores);
+
+    localStorage.setItem("scores", JSON.stringify(newScores));
+
+    resetBoard();
+  };
+
+  const handleDraw = () => {
+    window.alert("The game ended in a draw");
+    resetBoard();
+  };
+
+  const resetBoard = () => setGameState(INITIAL_GAME_STATE);
 
   const handleCellClick = (index: number) => {
     if (gameState[index] === "") {
       const newGameState = [...gameState];
       newGameState[index] = currentPlayer;
       setGameState(newGameState);
-      changePlayer();
-    }
-  };
 
-  const changePlayer = () => {
-    setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
+      const nextPlayer = currentPlayer === "X" ? "O" : "X";
+      setCurrentPlayer(nextPlayer);
+    }
   };
 
   return (
@@ -83,7 +105,18 @@ const Game: React.FC = () => {
           />
         ))}
       </div>
-      <div className="mt-4 text-white">Score Goes Here</div>
+
+      <div className="mx-auto w-96 text-2xl text-serif">
+        <p className="text-white mt-5">
+          Next Player: <span>{currentPlayer}</span>
+        </p>
+        <p>
+          Player X wins: <span>{scores["X"]}</span>
+        </p>
+        <p>
+          Player O wins: <span>{scores["O"]}</span>
+        </p>
+      </div>
     </div>
   );
 };
